@@ -9,7 +9,7 @@ export function getUserFromReq(req) {
   try {
     const data = jwt.verify(token, process.env.JWT_SECRET);
     return data; // { userId, email, iat, exp }
-  } catch (err) {
+  } catch {
     return null;
   }
 }

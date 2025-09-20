@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
 
     res.status(200).json({ user: { id: user.id, email: user.email } });
-  } catch (err) {
+  } catch {
     res.status(401).json({ error: "Token inválido ou expirado" });
   }
 }
