@@ -1,6 +1,7 @@
 // src/pages/api/auth/register.js
 import prisma from "../../../lib/prisma";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -31,10 +32,18 @@ export default async function handler(req, res) {
       },
     });
 
+    // Gera o token para o novo usuário
+    const token = jwt.sign(
+      { userId: newUser.id, email: newUser.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
     // Não retorne a senha no response
     const { password: _, ...userWithoutPassword } = newUser;
 
-    return res.status(201).json(userWithoutPassword);
+    // Retorna o token e os dados do usuário, assim como no login
+    return res.status(201).json({ token, user: userWithoutPassword });
   } catch (error) {
     console.error("Erro no register:", error);
     return res.status(500).json({ error: "Erro interno do servidor" });

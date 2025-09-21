@@ -1,74 +1,75 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
+import api from '../services/api'; // 1. Usar nossa instância centralizada do Axios
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Este estado é crucial
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        const res = await fetch("/api/auth/me", {
-          headers: { Authorization: "Bearer " + token },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user);
-        } else {
-          setUser(null);
-        }
-      } else {
+  // Usamos useCallback para evitar recriar a função em cada renderização
+  const checkUserLoggedIn = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        // O interceptor no `api.js` adiciona o token automaticamente
+        const { data } = await api.get('/auth/me');
+        setUser(data.user);
+      } catch (error) {
+        console.error("Falha na verificação de autenticação, limpando token.");
+        localStorage.removeItem('token');
         setUser(null);
       }
-      setLoading(false);
-    };
-    checkUser();
+    }
+    setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+  useEffect(() => {
+    checkUserLoggedIn();
+  }, [checkUserLoggedIn]);
 
-    if (res.ok) {
-      const { token, user: userData } = await res.json();
-      localStorage.setItem("token", token);
-      setUser(userData);
-      router.push("/dashboard");
-    } else {
-      const { error } = await res.json();
-      throw new Error(error || "Falha no login.");
+  const login = async (email, password) => {
+    try {
+      const { data } = await api.post('/auth/login', { email, password });
+      localStorage.setItem('token', data.token);
+      setUser(data.user);
+      router.push('/dashboard');
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || "Falha no login.";
+      throw new Error(errorMsg);
     }
   };
 
   const register = async (name, email, password) => {
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
-
-    if (res.ok) {
-      router.push("/login");
-    } else {
-      const { error } = await res.json();
-      throw new Error(error || "Falha no cadastro.");
+    try {
+      // 2. A API de registro agora retorna o token e o usuário
+      const { data } = await api.post('/auth/register', { name, email, password });
+      // 3. Autentica o usuário imediatamente após o registro
+      localStorage.setItem('token', data.token);
+      setUser(data.user);
+      router.push('/dashboard');
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || "Falha no cadastro.";
+      throw new Error(errorMsg);
     }
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem('token');
     setUser(null);
-    router.push("/login");
+    router.push('/login');
   };
 
-  const value = { user, loading, login, register, logout };
+  const value = {
+    user,
+    isAuthenticated: !!user, // 4. Adicionamos um booleano `isAuthenticated`
+    loading,
+    login,
+    register,
+    logout
+  };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

@@ -36,7 +36,7 @@ export default function Dashboard() {
         <div className="space-y-4">
           {tasks.map(task => (
             <TaskCard
-              key={task._id} // Usar o _id do MongoDB que é garantido ser único
+              key={task.id} // Prisma usa 'id' por padrão
               task={task}
               onToggle={toggleTask}
               onDelete={deleteTask}

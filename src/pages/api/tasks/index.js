@@ -1,38 +1,46 @@
-import clientPromise from "@/lib/mongo";
+import prisma from "@/lib/prisma";
+import { verifyToken } from "@/lib/auth";
 
 export default async function handler(req, res) {
-  if (req.method === 'POST') {
-    try {
-      const client = await clientPromise;
-      const db = client.db(process.env.MONGODB_DB_NAME);
+  try {
+    const decoded = verifyToken(req);
+    if (!decoded || !decoded.userId) {
+      return res.status(401).json({ message: "Acesso não autorizado." });
+    }
+    const { userId } = decoded;
 
-      const { title, userId } = req.body;
+    if (req.method === 'GET') {
+      const tasks = await prisma.task.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+      });
+      return res.status(200).json(tasks);
+    }
 
-      if (!title || !userId) {
-        return res.status(400).json({ message: 'Título e ID do usuário são obrigatórios.' });
+    if (req.method === 'POST') {
+      const { title } = req.body;
+
+      if (!title) {
+        return res.status(400).json({ message: 'O título é obrigatório.' });
       }
 
-      console.log(`Inserindo task: { title: "${title}", userId: "${userId}" } no banco: "${process.env.MONGODB_DB_NAME}"`);
-
-      const result = await db.collection('tasks').insertOne({
-        title,
-        userId,
-        completed: false,
-        createdAt: new Date(),
+      const newTask = await prisma.task.create({
+        data: {
+          title,
+          userId,
+        },
       });
 
-      console.log('Task inserida com sucesso:', result);
-      // A propriedade `ops` foi depreciada. Use `insertedId` para obter o ID.
-      const insertedTask = await db.collection('tasks').findOne({ _id: result.insertedId });
-
-      res.status(201).json({ message: 'Task criada com sucesso!', task: insertedTask });
-
-    } catch (e) {
-      console.error("ERRO AO CRIAR TASK:", e);
-      res.status(500).json({ message: 'Erro ao conectar ou inserir no banco de dados.', error: e.message });
+      return res.status(201).json({ message: 'Task criada com sucesso!', task: newTask });
     }
-  } else {
-    res.setHeader('Allow', ['POST']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+
+    res.setHeader('Allow', ['GET', 'POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  } catch (e) {
+    if (e.name === 'JsonWebTokenError' || e.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token inválido ou expirado.' });
+    }
+    console.error("ERRO AO PROCESSAR TASK:", e);
+    res.status(500).json({ message: 'Erro no servidor.', error: e.message });
   }
 }

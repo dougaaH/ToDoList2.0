@@ -1,19 +1,24 @@
-import jwt from "jsonwebtoken";
+import { verifyToken } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
 export default async function handler(req, res) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: "Token não informado" });
-
-  const token = authHeader.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
+    const decoded = verifyToken(req);
+    if (!decoded || !decoded.userId) {
+      return res.status(401).json({ message: "Acesso não autorizado." });
+    }
 
-    if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, name: true, email: true }, // Retorne apenas dados seguros
+    });
 
-    res.status(200).json({ user: { id: user.id, email: user.email } });
-  } catch {
-    res.status(401).json({ error: "Token inválido ou expirado" });
+    if (!user) {
+      return res.status(404).json({ message: "Usuário não encontrado." });
+    }
+
+    return res.status(200).json({ user });
+  } catch (error) {
+    return res.status(401).json({ message: "Token inválido ou expirado." });
   }
 }
