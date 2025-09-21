@@ -17,7 +17,7 @@ export function AuthProvider({ children }) {
         // O interceptor no `api.js` adiciona o token automaticamente
         const { data } = await api.get('/auth/me');
         setUser(data.user);
-      } catch (error) {
+      } catch {
         console.error("Falha na verificação de autenticação, limpando token.");
         localStorage.removeItem('token');
         setUser(null);

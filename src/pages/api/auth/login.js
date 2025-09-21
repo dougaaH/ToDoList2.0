@@ -23,12 +23,12 @@ export default async function handler(req, res) {
     );
 
     // Remove a senha do objeto de usuário antes de enviar a resposta
-    const { password: _, ...userWithoutPassword } = user;
+    delete user.password;
 
     // Retorna token e dados do usuário
     res
       .status(200)
-      .json({ token, user: userWithoutPassword });
+      .json({ token, user });
   } catch (err) {
     console.error("Erro no login:", err);
     res.status(500).json({ error: "Erro interno do servidor" });

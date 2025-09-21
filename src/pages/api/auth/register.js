@@ -40,10 +40,10 @@ export default async function handler(req, res) {
     );
 
     // Não retorne a senha no response
-    const { password: _, ...userWithoutPassword } = newUser;
+    delete newUser.password;
 
     // Retorna o token e os dados do usuário, assim como no login
-    return res.status(201).json({ token, user: userWithoutPassword });
+    return res.status(201).json({ token, user: newUser });
   } catch (error) {
     console.error("Erro no register:", error);
     return res.status(500).json({ error: "Erro interno do servidor" });
