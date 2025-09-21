@@ -51,7 +51,9 @@ O projeto utiliza um banco de dados PostgreSQL. Para o ambiente de desenvolvimen
 2.  Adicione as seguintes variáveis a este arquivo, substituindo os valores pelos seus:
 
     ```env
-    # Para desenvolvimento, usamos a URL de conexão direta
+    # Para desenvolvimento, use a URL de conexão direta (porta 5432) do Supabase.
+    # Se você optar por usar a URL com pool de conexões (porta 6543) em desenvolvimento,
+    # é essencial adicionar o parâmetro `?pgbouncer=true` ao final da URL para evitar erros.
     DATABASE_URL="postgresql://postgres:[SUA-SENHA]@[SEU-HOST].supabase.co:5432/postgres"
 
     # A URL direta também é necessária para o Prisma executar migrações
