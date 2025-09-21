@@ -36,12 +36,14 @@ Siga os passos abaixo para configurar o ambiente de desenvolvimento.
 
 ### 1. Configuração do Banco de Dados (Supabase)
 
-O projeto utiliza um banco de dados PostgreSQL hospedado no Supabase.
+O projeto utiliza um banco de dados PostgreSQL. Para o ambiente de desenvolvimento e produção, recomendamos o [Supabase](https://supabase.com/) pela facilidade de configuração e pelo pool de conexões (PgBouncer).
 
 1.  Crie uma conta gratuita no Supabase.
 2.  Crie um novo projeto.
 3.  No painel do seu projeto, navegue até **Project Settings** > **Database**.
-4.  Na seção **Connection string**, copie a URI que se parece com `postgresql://postgres:[YOUR-PASSWORD]@[...].supabase.co:5432/postgres`. Esta será a sua `DATABASE_URL`.
+4.  Você precisará de duas URLs de conexão:
+    - **URL de Conexão Direta**: Na seção **Connection string**, copie a URI que usa a porta `5432`.
+    - **URL com Pool de Conexões**: Na seção **Connection pooling**, copie a string de conexão que usa a porta `6543`.
 
 ### 2. Variáveis de Ambiente
 
@@ -49,10 +51,13 @@ O projeto utiliza um banco de dados PostgreSQL hospedado no Supabase.
 2.  Adicione as seguintes variáveis a este arquivo, substituindo os valores pelos seus:
 
     ```env
-    # Cole a URI do seu banco de dados Supabase aqui
+    # Para desenvolvimento, usamos a URL de conexão direta
     DATABASE_URL="postgresql://postgres:[SUA-SENHA]@[SEU-HOST].supabase.co:5432/postgres"
 
-    # Crie uma chave secreta longa e aleatória para assinar os tokens JWT
+    # A URL direta também é necessária para o Prisma executar migrações
+    DIRECT_URL="postgresql://postgres:[SUA-SENHA]@[SEU-HOST].supabase.co:5432/postgres"
+
+    # Crie uma chave secreta longa e aleatória para assinar os tokens JWT.
     JWT_SECRET="SUA_CHAVE_SECRETA_SUPER_SEGURA"
     ```
 
@@ -64,18 +69,21 @@ O projeto utiliza um banco de dados PostgreSQL hospedado no Supabase.
 Com o ambiente configurado, siga os passos abaixo para executar a aplicação:
 
 1.  **Clone o repositório:**
+
     ```bash
-    git clone https://github.com/seu-usuario/seu-repositorio.git
+    git clone https://github.com/dougaaH/ToDoList2.0.git
     cd seu-repositorio
     ```
 
 2.  **Instale as dependências:**
+
     ```bash
     npm install
     ```
 
 3.  **Execute as migrações do banco de dados:**
     Este comando irá ler o `schema.prisma` e criar as tabelas `User` e `Task` no seu banco de dados Supabase.
+
     ```bash
     npx prisma migrate dev
     ```
@@ -86,3 +94,34 @@ Com o ambiente configurado, siga os passos abaixo para executar a aplicação:
     ```
 
 A aplicação estará disponível em http://localhost:3000.
+
+## 🚀 Deploy (Vercel)
+
+Este projeto está pronto para ser implantado na [Vercel](https://vercel.com/).
+
+### 1. Importe o Projeto
+
+1.  Após fazer o push do seu código para um repositório no GitHub, acesse seu painel da Vercel.
+2.  Clique em "Add New..." > "Project".
+3.  Importe o repositório do seu projeto. A Vercel detectará automaticamente que é um projeto Next.js e configurará os comandos de build (`npm run build`) e instalação (`npm install`).
+
+### 2. Configure as Variáveis de Ambiente
+
+Esta é a etapa mais importante. A aplicação precisa das chaves secretas para se conectar ao banco de dados e para a autenticação JWT.
+
+1.  No painel do seu projeto na Vercel, vá para **Settings** > **Environment Variables**.
+2.  Adicione as seguintes variáveis:
+
+| Key            | Value                                           | Descrição                                                                                                                                |
+| :------------- | :---------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL` | `postgresql://...:6543/postgres?pgbouncer=true` | **URL com Pool de Conexões**. Vá ao seu projeto Supabase > Project Settings > Database > Connection pooling e copie a string de conexão. |
+| `DIRECT_URL`   | `postgresql://...:5432/postgres`                | **URL de Conexão Direta**. Vá ao seu projeto Supabase > Project Settings > Database > Connection string e copie a URI.                   |
+| `JWT_SECRET`   | `sua_chave_super_secreta`                       | A mesma chave que você usou no seu arquivo `.env` local.                                                                                 |
+
+> **Atenção:** É crucial usar a URL com **PgBouncer** (`DATABASE_URL`) para a aplicação em produção para gerenciar o pool de conexões de forma eficiente em um ambiente serverless. A `DIRECT_URL` é usada pelo Prisma durante o processo de build para gerar o cliente.
+
+### 3. Faça o Deploy
+
+Após configurar as variáveis de ambiente, vá para a aba **Deployments** e acione um "Redeploy" para que as novas configurações sejam aplicadas.
+
+Sua aplicação estará online e funcionando!
